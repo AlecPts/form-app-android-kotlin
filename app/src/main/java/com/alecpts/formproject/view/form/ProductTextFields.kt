@@ -1,12 +1,14 @@
 package com.alecpts.formproject.view.form
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.DateRange
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Place
+import androidx.compose.material.icons.filled.Star
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.material3.rememberDatePickerState
@@ -47,6 +49,12 @@ fun ProductTextFields(
         onValueChange = onProductNameChange,
         placeholder = { Text("Product name") },
         maxLines = 1,
+        trailingIcon = {
+            Icon(
+                imageVector = Icons.Default.Edit,
+                contentDescription = "Select date"
+            )
+        },
     )
 
     // Date picker
@@ -62,15 +70,17 @@ fun ProductTextFields(
         value = purchaseDate,
         onValueChange = onPurchaseDateChange,
         placeholder = { Text("Date of purchase") },
-        readOnly = true,
+        enabled = false,
         trailingIcon = {
-            IconButton(onClick = { showDatePicker.value = true }) {
-                Icon(
-                    imageVector = Icons.Default.DateRange,
-                    contentDescription = "Select date"
-                )
-            }
-        }
+            Icon(
+                imageVector = Icons.Default.DateRange,
+                contentDescription = "Select date"
+            )
+        },
+        modifier = Modifier
+            .clickable(onClick = {
+                showDatePicker.value = true
+            })
     )
 
     // Color picker
@@ -85,21 +95,29 @@ fun ProductTextFields(
         value = productColor,
         onValueChange = onProductColorChange,
         placeholder = { Text("Product color") },
-        readOnly = true,
+        enabled = false,
         trailingIcon = {
-            IconButton(onClick = { showColorPicker.value = true }) {
-                Icon(
-                    imageVector = Icons.Default.Edit,
-                    contentDescription = "Select color"
-                )
-            }
-        }
+            Icon(
+                imageVector = Icons.Default.Star,
+                contentDescription = "Select color"
+            )
+        },
+        modifier = Modifier
+            .clickable(onClick = {
+                showColorPicker.value = true
+            })
     )
 
     TextField(
         value = productOrigin,
         onValueChange = onProductOriginChange,
         placeholder = { Text("Product origin") },
-        maxLines = 1
+        maxLines = 1,
+        trailingIcon = {
+            Icon(
+                imageVector = Icons.Default.Place,
+                contentDescription = "Select date"
+            )
+        },
     )
 }

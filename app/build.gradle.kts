@@ -54,6 +54,7 @@ dependencies {
     implementation(libs.androidx.foundation.layout.android)
     implementation(libs.colorpicker.compose)
     implementation(libs.compose.destinations.core)
+    implementation(libs.coil.compose)
     ksp(libs.compose.destinations.ksp)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)

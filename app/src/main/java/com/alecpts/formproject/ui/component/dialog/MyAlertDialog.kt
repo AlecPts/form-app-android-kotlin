@@ -1,4 +1,4 @@
-package com.alecpts.formproject.ui.component
+package com.alecpts.formproject.ui.component.dialog
 
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -7,21 +7,21 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.ui.unit.sp
-import com.ramcosta.composedestinations.annotation.Destination
+import com.alecpts.formproject.classe.Product
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.ramcosta.composedestinations.result.ResultBackNavigator
 
 @Composable
 fun MyAlertDialog(
-    shouldShowDialog: MutableState<Boolean>,
-    formInfoList: MutableList<String>,
+    showDialog: MutableState<Boolean>,
+    product: Product,
     navigator: DestinationsNavigator,
-    resultNavigator: ResultBackNavigator<String>
+    resultNavigator: ResultBackNavigator<Product>,
     ) {
-        if (shouldShowDialog.value) {
+        if (showDialog.value) {
             AlertDialog(
                 onDismissRequest = {
-                    shouldShowDialog.value = false
+                    showDialog.value = false
                 },
                 title = {
                     Text(
@@ -31,18 +31,18 @@ fun MyAlertDialog(
                 },
                 text = {
                     Text(
-                        "Product type : " + formInfoList[0] + "\n" +
-                            "Product name : " + formInfoList[1] + "\n" +
-                            "Purchase date : " + formInfoList[2] + "\n" +
-                            "Product color : " + formInfoList[3] + "\n" +
-                            "Product origin : " + formInfoList[4] + "\n" +
-                            "Favorite : " + formInfoList[5]
+                        "Product type : " + product.type + "\n" +
+                            "Product name : " + product.productName + "\n" +
+                            "Purchase date : " + product.purchaseDate + "\n" +
+                            "Product color : " + product.productColor + "\n" +
+                            "Product origin : " + product.productOrigin + "\n" +
+                            "Favorite : " + product.favorite
                     )
                 },
                 dismissButton = {
                     TextButton(
                         onClick = {
-                            shouldShowDialog.value = false
+                            showDialog.value = false
                         }
                     ) {
                         Text(
@@ -53,11 +53,8 @@ fun MyAlertDialog(
                 confirmButton = {
                     Button(
                         onClick = {
-                            // Convert mutable list to string
-                            val formInfoString = formInfoList.joinToString(separator = "\n")
-
                             // Return info list to main view
-                            resultNavigator.navigateBack(formInfoString)
+                            resultNavigator.navigateBack(product)
                         }
                     ) {
                         Text(

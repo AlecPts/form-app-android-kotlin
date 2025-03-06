@@ -30,15 +30,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
-import com.alecpts.formproject.Manifest
+import android.Manifest
+import android.graphics.Bitmap
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.rememberAsyncImagePainter
 import com.alecpts.formproject.R
-import com.alecpts.formproject.ui.component.MyAlertDialog
+import com.alecpts.formproject.classe.Product
+import com.alecpts.formproject.ui.component.dialog.ImagePickerDialog
+import com.alecpts.formproject.ui.component.dialog.MyAlertDialog
+import com.alecpts.formproject.ui.component.dialog.PermissionDeniedDialog
 import com.google.accompanist.permissions.ExperimentalPermissionsApi
 import com.google.accompanist.permissions.rememberPermissionState
+import com.google.accompanist.permissions.shouldShowRationale
 import com.ramcosta.composedestinations.annotation.Destination
 import com.ramcosta.composedestinations.navigation.DestinationsNavigator
 import com.ramcosta.composedestinations.result.ResultBackNavigator
-import com.ramcosta.composedestinations.result.ResultRecipient
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -48,36 +58,108 @@ import kotlinx.coroutines.launch
 @Composable
 fun FormView(
     navigator: DestinationsNavigator,
-    resultNavigator: ResultBackNavigator<String>,
-    id: Int
+    resultNavigator: ResultBackNavigator<Product>,
+    id: Int,
+    productToModify: Product? = null
 ) {
     // Snackbar
     val scope = rememberCoroutineScope()
     val snackbarHostState = remember { SnackbarHostState() }
 
+    val productId = 0
     var state by remember { mutableStateOf(ProductType.None) }
 
     // Textfields
-    var productName by remember { mutableStateOf("") }
-    var purchaseDate by remember { mutableStateOf("") }
-    var productColor by remember { mutableStateOf("") }
-    var productOrigin by remember { mutableStateOf("") }
-    var checked by remember { mutableStateOf(false) }
+    var productName by remember { mutableStateOf(productToModify?.productName ?: "") }
+    var purchaseDate by remember { mutableStateOf(productToModify?.purchaseDate ?:"") }
+    var productColor by remember { mutableStateOf(productToModify?.productColor ?:"") }
+    var productOrigin by remember { mutableStateOf(productToModify?.productOrigin ?:"") }
+    var checked by remember { mutableStateOf(productToModify?.favorite ?:false) }
+
+    // Product image based on selected product type
+    val imagePainter = productToModify?.imagePainterId
+        ?: when (state) {
+        ProductType.Consumable -> R.drawable.potion_of_healing
+        ProductType.Durable -> R.drawable.pure_nail
+        ProductType.Other -> R.drawable.animal_crossing_leaf
+        else -> R.drawable.default_image
+    }
+
+    // Add new image from image picker dialog
+    var selectedImageUri by remember { mutableStateOf<Uri?>(productToModify?.imageUri) }
+    var selectedImageBitmap by remember { mutableStateOf<Bitmap?>(productToModify?.imageBitmap) }
 
     // Form info list
-    val formInfoList: MutableList<String> = mutableListOf(
+    val product = Product(
         state.toString(),
         productName,
         purchaseDate,
         productColor,
         productOrigin,
-        checked.toString()
+        checked,
+        imagePainter,
+        imageUri = selectedImageUri,
+        imageBitmap = selectedImageBitmap
     )
 
     val showDialog = remember { mutableStateOf(false) }
+    val showImagePickerDialog = remember { mutableStateOf(false) }
 
-    // Permission
-    val cameraPermissions = rememberPermissionState(Manifest.permission.CAMERA)
+    val takePictureLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.TakePicturePreview(),
+        onResult = { bitmap ->
+            if (bitmap != null) {
+                selectedImageBitmap = bitmap
+            }
+        }
+    )
+
+    val pickImageLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent(),
+        onResult = { uri ->
+            if (uri != null) {
+                selectedImageUri = uri
+            }
+        }
+    )
+
+    // Permissions
+    val showPermissionDeniedDialog = remember { mutableStateOf(false) }
+
+    val cameraPermissionState = rememberPermissionState(Manifest.permission.CAMERA)
+    val requestCameraPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            takePictureLauncher.launch(null)
+        }
+        else {
+            showPermissionDeniedDialog.value = true
+        }
+    }
+
+    val galleryPermissionState = rememberPermissionState(Manifest.permission.READ_EXTERNAL_STORAGE)
+    val requestGalleryPermissionLauncher = rememberLauncherForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted ->
+        if (isGranted) {
+            pickImageLauncher.launch("image/*")
+        }
+        else {
+            showPermissionDeniedDialog.value = true
+        }
+    }
+
+    // Show why permission is needed
+    if (showPermissionDeniedDialog.value) {
+        if (cameraPermissionState.status.shouldShowRationale) {
+            PermissionDeniedDialog(showPermissionDeniedDialog, requestCameraPermissionLauncher, "camera")
+        }
+        else if (galleryPermissionState.status.shouldShowRationale) {
+            PermissionDeniedDialog(showPermissionDeniedDialog, requestGalleryPermissionLauncher, "gallery")
+        }
+    }
+
 
     // Initialize Scaffold
     Scaffold(
@@ -102,23 +184,39 @@ fun FormView(
                 }
             )
 
-            // Product image based on selected product type
-            val imagePainter = when (state) {
-                ProductType.Consumable -> R.drawable.potion_of_healing
-                ProductType.Durable -> R.drawable.pure_nail
-                ProductType.Other -> R.drawable.animal_crossing_leaf
-                else -> R.drawable.default_image
-            }
 
             // Form profile picture
             Image(
-                painter = painterResource(id = imagePainter),
-                contentDescription = null,
+                painter = when {
+                    selectedImageBitmap != null -> rememberAsyncImagePainter(selectedImageBitmap)
+                    selectedImageUri != null -> rememberAsyncImagePainter(selectedImageUri)
+                    else -> painterResource(id = imagePainter)
+                },
+                contentDescription = "Product image",
+                contentScale = ContentScale.Crop,
                 modifier = Modifier
                     .size(120.dp)
                     .align(Alignment.CenterHorizontally)
                     .clip(CircleShape)
+                    .clickable(onClick = {
+                        // Choose between camera and gallery
+                        showImagePickerDialog.value = true
+                    })
             )
+
+            // Show camera picker
+            if (showImagePickerDialog.value) {
+                ImagePickerDialog(
+                    showImagePickerDialog,
+                    cameraPermissionState,
+                    showPermissionDeniedDialog,
+                    requestCameraPermissionLauncher,
+                    requestGalleryPermissionLauncher,
+                    takePictureLauncher,
+                    pickImageLauncher
+                )
+            }
+
 
             // Radio Buttons to choose product type
             ProductTypeSelector(state) { selectedProductType ->
@@ -153,10 +251,10 @@ fun FormView(
             // Add informations to Toast
             if (showDialog.value) {
                 MyAlertDialog(
-                    shouldShowDialog = showDialog,
-                    formInfoList,
+                    showDialog,
+                    product,
                     navigator,
-                    resultNavigator
+                    resultNavigator,
                 )
             }
 
